@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Particle = {
   originX: number;
@@ -45,8 +45,8 @@ function createBiasedCoordinate(size: number) {
   return Math.random() * size;
 }
 
-function createParticles(width: number, height: number) {
-  return Array.from({ length: PARTICLE_COUNT }, () => {
+function createParticles(width: number, height: number, particleCount = PARTICLE_COUNT, shouldDrift = true) {
+  return Array.from({ length: particleCount }, () => {
     let originX = createBiasedCoordinate(width);
     let originY = createBiasedCoordinate(height);
 
@@ -65,17 +65,17 @@ function createParticles(width: number, height: number) {
       y: Math.min(Math.max(originY, 0), height),
       radius: randomBetween(0.8, 2.2),
       color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
-      driftX: randomBetween(-0.08, 0.08),
-      driftY: randomBetween(-0.08, 0.08),
+      driftX: shouldDrift ? randomBetween(-0.08, 0.08) : 0,
+      driftY: shouldDrift ? randomBetween(-0.08, 0.08) : 0,
       opacity: 1,
     };
   });
 }
 
-function createParticleGroups(width: number, height: number) {
+function createParticleGroups(width: number, height: number, particleCount = PARTICLE_COUNT, shouldDrift = true) {
   const groups = new Map<string, Particle[]>();
 
-  createParticles(width, height).forEach((particle) => {
+  createParticles(width, height, particleCount, shouldDrift).forEach((particle) => {
     const group = groups.get(particle.color);
 
     if (group) {
@@ -109,6 +109,9 @@ function createParticleWorker() {
     let width = 0;
     let height = 0;
     let pixelRatio = 1;
+    let particleCount = ${PARTICLE_COUNT};
+    let shouldDrift = true;
+    let enableRepulsion = true;
     let animationFrame = 0;
     let last = 0;
 
@@ -132,7 +135,7 @@ function createParticleWorker() {
     const randomBetween = (min, max) => min + Math.random() * (max - min);
     const createBiasedCoordinate = (size) => Math.random() * size;
 
-    const createParticles = () => Array.from({ length: PARTICLE_COUNT }, () => {
+    const createParticles = () => Array.from({ length: particleCount }, () => {
       let originX = createBiasedCoordinate(width);
       let originY = createBiasedCoordinate(height);
 
@@ -151,8 +154,8 @@ function createParticleWorker() {
         y: Math.min(Math.max(originY, 0), height),
         radius: randomBetween(0.8, 2.2),
         color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
-        driftX: randomBetween(-0.08, 0.08),
-        driftY: randomBetween(-0.08, 0.08),
+        driftX: shouldDrift ? randomBetween(-0.08, 0.08) : 0,
+        driftY: shouldDrift ? randomBetween(-0.08, 0.08) : 0,
         opacity: 1,
       };
     });
@@ -179,8 +182,10 @@ function createParticleWorker() {
     };
 
     const updateParticle = (particle) => {
-      particle.x += particle.driftX;
-      particle.y += particle.driftY;
+      if (shouldDrift) {
+        particle.x += particle.driftX;
+        particle.y += particle.driftY;
+      }
 
       if (particle.x < 0) {
         particle.x = width;
@@ -198,7 +203,7 @@ function createParticleWorker() {
         particle.originY = 0;
       }
 
-      if (cursor) {
+      if (enableRepulsion && cursor) {
         const deltaX = particle.x - cursor.x;
         const deltaY = particle.y - cursor.y;
         const distance = Math.max(Math.hypot(deltaX, deltaY), 0.001);
@@ -214,8 +219,10 @@ function createParticleWorker() {
 
       particle.x += (particle.originX - particle.x) * RETURN_SPEED;
       particle.y += (particle.originY - particle.y) * RETURN_SPEED;
-      particle.originX += particle.driftX;
-      particle.originY += particle.driftY;
+      if (shouldDrift) {
+        particle.originX += particle.driftX;
+        particle.originY += particle.driftY;
+      }
 
       if (particle.originX < 0) {
         particle.originX = width;
@@ -286,6 +293,9 @@ function createParticleWorker() {
         width = message.width;
         height = message.height;
         pixelRatio = message.pixelRatio || 1;
+        particleCount = message.particleCount || PARTICLE_COUNT;
+        shouldDrift = Boolean(message.shouldDrift);
+        enableRepulsion = Boolean(message.enableRepulsion);
 
         if (!canvas || !context) {
           return;
@@ -330,8 +340,17 @@ export function ParticleField() {
   const particleGroupsRef = useRef<ParticleGroup[]>([]);
   const cursorRef = useRef<CursorPosition>(null);
   const animationFrameRef = useRef<number>();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return undefined;
+    }
+
     const canvas = canvasRef.current;
 
     if (!canvas) {
@@ -341,8 +360,10 @@ export function ParticleField() {
     canvas.style.willChange = 'transform';
     canvas.style.transform = 'translateZ(0)';
 
+    const isMobileViewport = () => window.innerWidth < 768;
     const supportsOffscreenCanvas =
       process.env.NODE_ENV === 'production' &&
+      !isMobileViewport() &&
       typeof OffscreenCanvas !== 'undefined' &&
       'transferControlToOffscreen' in canvas &&
       typeof Worker !== 'undefined';
@@ -364,12 +385,24 @@ export function ParticleField() {
       const pixelRatio = window.devicePixelRatio || 1;
       const width = window.innerWidth;
       const height = window.innerHeight;
+      const isMobile = isMobileViewport();
+      const particleCount = isMobile ? 60 : PARTICLE_COUNT;
+      const shouldDrift = !isMobile;
+      const enableRepulsion = !isMobile;
 
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
       if (workerHandle) {
-        workerHandle.worker.postMessage({ type: 'resize', width, height, pixelRatio });
+        workerHandle.worker.postMessage({
+          type: 'resize',
+          width,
+          height,
+          pixelRatio,
+          particleCount,
+          shouldDrift,
+          enableRepulsion,
+        });
         return;
       }
 
@@ -380,7 +413,7 @@ export function ParticleField() {
       canvas.width = width * pixelRatio;
       canvas.height = height * pixelRatio;
       context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      particleGroupsRef.current = createParticleGroups(width, height);
+      particleGroupsRef.current = createParticleGroups(width, height, particleCount, shouldDrift);
     };
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -399,8 +432,10 @@ export function ParticleField() {
     const updateParticle = (particle: Particle, width: number, height: number) => {
       const cursor = cursorRef.current;
 
-      particle.x += particle.driftX;
-      particle.y += particle.driftY;
+      if (particle.driftX || particle.driftY) {
+        particle.x += particle.driftX;
+        particle.y += particle.driftY;
+      }
 
       if (particle.x < 0) {
         particle.x = width;
@@ -418,7 +453,7 @@ export function ParticleField() {
         particle.originY = 0;
       }
 
-      if (cursor) {
+      if (cursor && !isMobileViewport()) {
         const deltaX = particle.x - cursor.x;
         const deltaY = particle.y - cursor.y;
         const distance = Math.max(Math.hypot(deltaX, deltaY), 0.001);
@@ -434,8 +469,10 @@ export function ParticleField() {
 
       particle.x += (particle.originX - particle.x) * RETURN_SPEED;
       particle.y += (particle.originY - particle.y) * RETURN_SPEED;
-      particle.originX += particle.driftX;
-      particle.originY += particle.driftY;
+      if (particle.driftX || particle.driftY) {
+        particle.originX += particle.driftX;
+        particle.originY += particle.driftY;
+      }
 
       if (particle.originX < 0) {
         particle.originX = width;
@@ -483,7 +520,10 @@ export function ParticleField() {
       }
 
       context.restore();
-      animationFrameRef.current = window.requestAnimationFrame(loop);
+
+      if (!isMobileViewport()) {
+        animationFrameRef.current = window.requestAnimationFrame(loop);
+      }
     };
 
     let last = 0;
@@ -504,10 +544,20 @@ export function ParticleField() {
       animationFrameRef.current = window.requestAnimationFrame(loop);
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    window.addEventListener('mouseleave', handleMouseLeave);
-    window.addEventListener('portfolio:refresh-particles', resizeCanvas);
+    const handleStaticRefresh = () => {
+      resizeCanvas();
+
+      if (!workerHandle && isMobileViewport()) {
+        animationFrameRef.current = window.requestAnimationFrame(loop);
+      }
+    };
+
+    window.addEventListener('resize', handleStaticRefresh);
+    if (!isMobileViewport()) {
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
+      window.addEventListener('mouseleave', handleMouseLeave);
+    }
+    window.addEventListener('portfolio:refresh-particles', handleStaticRefresh);
 
     return () => {
       if (animationFrameRef.current) {
@@ -520,12 +570,16 @@ export function ParticleField() {
         URL.revokeObjectURL(workerHandle.url);
       }
 
-      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('resize', handleStaticRefresh);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('portfolio:refresh-particles', resizeCanvas);
+      window.removeEventListener('portfolio:refresh-particles', handleStaticRefresh);
     };
-  }, []);
+  }, [mounted]);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <canvas

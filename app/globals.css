@@ -2022,6 +2022,11 @@ a {
 }
 
 @media (max-width: 767px) {
+  .glass-panel {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
   .hero-radial-menu-backdrop {
     display: block;
   }

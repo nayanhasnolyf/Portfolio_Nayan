@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Mail, RotateCcw } from 'lucide-react';
-import { useEffect, useRef, useState, type PointerEvent, type TouchEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { siGithub } from 'simple-icons';
 import { profile, story } from '@/lib/content';
@@ -27,6 +27,7 @@ export function Hero() {
   const [radialMenu, setRadialMenu] = useState<RadialMenuState>({ x: 0, y: 0, visible: false });
   const longPressTimerRef = useRef<number | null>(null);
   const radialMenuTriggeredRef = useRef(false);
+  const heroFrontRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -66,7 +67,7 @@ export function Hero() {
     }
   };
 
-  const handleHeroTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+  const handleHeroTouchStart = (event: TouchEvent) => {
     if (!window.matchMedia('(max-width: 767px)').matches) {
       return;
     }
@@ -102,6 +103,26 @@ export function Hero() {
   const handleHeroTouchEnd = () => {
     clearLongPressTimer();
   };
+
+  useEffect(() => {
+    const heroFront = heroFrontRef.current;
+
+    if (!heroFront) {
+      return undefined;
+    }
+
+    heroFront.addEventListener('touchstart', handleHeroTouchStart, { passive: true });
+    heroFront.addEventListener('touchmove', handleHeroTouchMove, { passive: true });
+    heroFront.addEventListener('touchend', handleHeroTouchEnd, { passive: true });
+    heroFront.addEventListener('touchcancel', handleHeroTouchEnd, { passive: true });
+
+    return () => {
+      heroFront.removeEventListener('touchstart', handleHeroTouchStart);
+      heroFront.removeEventListener('touchmove', handleHeroTouchMove);
+      heroFront.removeEventListener('touchend', handleHeroTouchEnd);
+      heroFront.removeEventListener('touchcancel', handleHeroTouchEnd);
+    };
+  });
 
   const openRadialLink = (href: string) => {
     if (href.startsWith('mailto:')) {
@@ -174,11 +195,8 @@ export function Hero() {
         >
           <div className="hero-flip-inner">
             <div
+              ref={heroFrontRef}
               className="hero-flip-face hero-flip-front"
-              onTouchStart={handleHeroTouchStart}
-              onTouchMove={handleHeroTouchMove}
-              onTouchEnd={handleHeroTouchEnd}
-              onTouchCancel={handleHeroTouchEnd}
             >
               <div className="hero-availability mx-auto mt-6 max-w-fit text-xs md:mt-4 md:text-sm">
                 <span className="hero-availability-dot" aria-hidden="true" />
