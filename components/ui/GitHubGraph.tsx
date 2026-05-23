@@ -16,7 +16,7 @@ export async function GitHubGraph() {
         <GitHubGraphGrid weeks={graph.weeks} />
       ) : (
         <p className="github-graph-fallback">
-          Contribution activity unavailable. Add GITHUB_TOKEN to .env.local.
+          Contribution activity unavailable. Add GITHUB_TOKEN in Vercel environment variables and redeploy.
         </p>
       )}
 
