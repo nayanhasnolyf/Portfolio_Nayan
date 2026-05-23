@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# local tooling/state
+.agents/
+.codex/
+*.tsbuildinfo
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor
+.DS_Store
+.vscode/
