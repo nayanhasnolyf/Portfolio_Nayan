@@ -7,10 +7,8 @@ import { FloatingWindowProvider } from '@/components/interaction/FloatingWindow'
 import { DockNavigation } from '@/components/layout/DockNavigation';
 import { ParticleField } from '@/components/ui/ParticleField';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
-import { useLerpScroll } from '@/hooks/useLerpScroll';
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
-  const { viewportRef, contentRef } = useLerpScroll();
   const [isRefreshingParticles, setIsRefreshingParticles] = useState(false);
 
   useEffect(() => {
@@ -52,8 +50,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         </div>
         <AtmosphericBackground />
         <ParticleField />
-        <div ref={viewportRef} className="virtual-scroll-viewport">
-          <div ref={contentRef} className="virtual-scroll-content">
+        <div className="virtual-scroll-viewport">
+          <div className="virtual-scroll-content">
             <main className="page-scroll-container relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-24 px-4 pt-6 sm:px-6 sm:pt-8 lg:gap-32 lg:px-8 lg:pt-10">
               {children}
             </main>

@@ -24,7 +24,7 @@ type ParticleGroup = {
   particles: Particle[];
 };
 
-const PARTICLE_COUNT = 420;
+const PARTICLE_COUNT = 260;
 const REPEL_RADIUS = 160;
 const REPEL_STRENGTH = 60;
 const RETURN_SPEED = 0.055;

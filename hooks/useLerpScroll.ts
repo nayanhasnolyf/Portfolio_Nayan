@@ -41,8 +41,7 @@ export function scrollToVirtualElement(id: string) {
     return;
   }
 
-  const elementTop = element.getBoundingClientRect().top + virtualScrollState.currentY;
-  setVirtualScrollTarget(elementTop);
+  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 export function useLerpScroll() {
