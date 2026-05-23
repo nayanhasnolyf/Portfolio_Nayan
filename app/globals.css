@@ -19,20 +19,20 @@
 }
 
 html {
-  min-height: 100%;
+  height: 100vh;
   scroll-behavior: auto;
   scroll-padding-top: 2.5rem;
   background: #06101a;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body {
   @apply bg-glass-950 text-slate-100 antialiased;
-  min-height: 100%;
+  height: 100vh;
   margin: 0;
-  overflow-x: hidden;
+  overflow: hidden;
   scroll-behavior: auto;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
@@ -62,14 +62,15 @@ a {
 }
 
 .virtual-scroll-viewport {
-  position: relative;
-  overflow: visible;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
 }
 
 .virtual-scroll-content {
   min-height: auto;
   height: fit-content;
-  will-change: auto;
+  will-change: transform;
 }
 
 .scroll-progress-root {
